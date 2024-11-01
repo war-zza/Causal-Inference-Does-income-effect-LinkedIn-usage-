@@ -1,0 +1,273 @@
+---
+title: "assign1"
+output: html_document
+date: "2024-10-28"
+---
+
+**Wardah \n Zaidi** 
+**B00928483** 
+**Assignment\n 1** 
+
+cat("**Data**")
+```{r }
+data <- read.csv("data.csv", header = TRUE)
+str(data)
+```
+
+**Introduction**
+
+Social media platforms have transformed how people communicate, consume information, and engage with content. The diversity of platform preferences among different demographic groups reveals complex patterns that may be influenced by a range of socio-demographic factors, such as age, income, and educational background. As social media continues to grow in influence, understanding these usage patterns can inform efforts to bridge digital divides and ensure equitable access to information and online social networks (Perrin, 2015; Anderson & Perrin, 2019).
+
+Social media adoption often correlates with factors like age, socioeconomic status, and education (Auxier & Anderson, 2021). Younger adults, for example, tend to use newer platforms like TikTok and Snapchat, while older adults are more likely to be on Facebook. Similarly, individuals with higher levels of education and income are more likely to use professional networks like LinkedIn. These patterns raise questions about the causal relationships between demographics and social media platform usage, as the spread of misinformation and unequal access to information could exacerbate disparities across communities (Tandoc et al., 2018)
+
+**Causal \n  Question \n ** 
+
+
+Does income level causally affect the likelihood of adults using LinkedIn?
+
+**Explanation \n for \n the \n Causal \n Question** 
+
+
+Going through LinkedIn, for applying co-op jobs as a undergrad and not waiting for any positive outcome can be emotionally frustrating and draining. When cold- mailing HR recruiters, connecting Talent acquisition team and trying to have a coffee chat with a you age peers can be difficult. LinkedIn verification helps to show genuineness of the profile but it costs to get verified. Benefits of having LinkedIn Premium membership is costly, especially for college students, but its benefits are useful. Currently, Having to deal with  LinkedIn and observing these things is the reason for the chose causal Inference. 
+
+
+Given LinkedIn's role as a professional networking platform, there may be a causal relationship between income and LinkedIn usage. Higher-income individuals might have greater access to professional networks, educational opportunities, and job-seeking resources, which could drive more significant usage of LinkedIn. However, the relationship could also be mediated by factors like education level, which influences both income and professional platform usage. This question aims to assess whether income level has a direct impact on LinkedIn usage or if other unobserved variables (e.g., education, industry) play a mediating role.
+
+
+
+**DATA \n COLLECTION \n **
+
+The dataset used for this analysis was published by the Pew Research Center in 2023. It provides insights into social media usage patterns across various demographic groups in the U.S., including differences in platform preferences based on factors such as age, gender, race/ethnicity, income level, education level, and urbanicity (i.e., urban, suburban, or rural residence). The data was collected through a nationally representative survey of U.S. adults conducted from May 19 to September 5, 2023. Survey participants were asked whether they "ever use" different social media platforms, with their responses used to calculate the percentage of each demographic group that uses each platform.
+
+The sample included English-speaking U.S. adults, representative of the general population in terms of age, gender, race/ethnicity, and other key demographics. Pew Research Center utilized a random sampling approach and conducted the survey primarily online, with additional telephone interviews to ensure inclusivity for participants who may not have internet access. Survey responses were weighted to align with U.S. population benchmarks for demographic variables such as age, race, and education, making the results generalizable to the broader U.S. adult population.
+
+The primary variables in this dataset include (sample space):
+
+Demographic Variables: Gender, age group, race/ethnicity, income level, education level, and urbanicity.
+Platform Usage Indicators: Binary indicators representing whether respondents ever use each social media platform, such as Facebook, Instagram, LinkedIn, and others.
+This dataset provides a snapshot of social media usage patterns among U.S. adults and can be analyzed to understand how demographic factors correlate with platform use. 
+
+We will be using dataset for age, income and LinkedIn usage. 
+
+Causal Model Development
+To answer the causal question, "Does income level causally affect the likelihood of adults using LinkedIn?", we use a Directed Acyclic Graph (DAG) that identifies the assumed relationships between variables. The main objective is to estimate the causal effect of income on LinkedIn usage, accounting for potential confounding variables. 
+
+Income → LinkedIn Usage – the direct effect we are trying to estimate.
+Age → Income – age influences income, as income tends to increase with experience and time in the workforce.
+Age → LinkedIn Usage – age may also influence the likelihood of using LinkedIn, as different age groups have different familiarity and comfort levels with online platforms. 
+```{r} 
+library(dagitty)
+
+dag <- dagitty('
+dag {
+  "Income" -> "LinkedInUsage"       
+  "Age" -> "Income"
+  "Age" -> "LinkedInUsage"
+}
+')
+
+plot(dag) 
+```
+The four elemental cofounds: 
+
+1)AGE the fork  
+
+2)lINKEDiN usage  is the collider 
+
+3)Income is the pipe 
+
+
+
+
+```{r}
+adjustmentSets(dag, exposure = "Income", outcome = "LinkedInUsage")
+
+```
+cat("** Bayesian \n model**") 
+
+1) Model Formulation: The model will predict the probability of LinkedIn Usage based on Income and Age.
+2) Priors: Weakly informative priors are assigned to the intercept and coefficients, allowing flexibility in estimation.
+3) Data: We’ll use hypothetical data that represents the structure seen in the Pew Research Center data. 
+
+
+$$LinkedInUsage_i ∼ Bernoulli(p_i)$$
+$$\text{logit}(p_i) = \alpha + \beta_{\text{income}} \cdot \text{Income}_i + \beta_{\text{age}} \cdot \text{Age}_i$$
+
+
+
+where- 
+p_i is the the probability of LinkedIn usage for individual i 
+alpha  is the intercept,
+β income is the effect of Income on LinkedIn usage, 
+β age  is the effect of Age on LinkedIn usage. 
+
+```{r}
+#ometimes, model fitting issues arise if there’s not enough variability in the data or the priors are too restrictive
+library(rethinking)
+
+data <- list(
+  LinkedInUsage = c(1, 1, 1, 1),
+  Income = c(1, 1, 3, 2),
+  Age = c(20, 35, 55, 60)
+)
+
+model <- ulam(
+  alist(
+    LinkedInUsage ~ dbinom(1, p),
+    logit(p) <- alpha + beta_income * Income + beta_age * Age,
+    alpha ~ dnorm(0, 10),
+    beta_income ~ dnorm(0, 10),
+    beta_age ~ dnorm(0, 10)
+  ), data = data, chains = 4, cores = 4
+)
+
+# Summary statistics
+summary <- precis(model, depth = 2)
+print(summary)
+
+
+
+```
+```{r} 
+library(rethinking)
+
+data <- list(
+  LinkedInUsage = c(1, 1, 1, 1),
+  Income = c(1, 1, 3, 2),
+  Age = c(20, 35, 55, 60)
+)
+
+model <- ulam(
+  alist(
+    LinkedInUsage ~ dbinom(1, p),
+    logit(p) <- alpha + beta_income * Income + beta_age * Age,
+    alpha ~ dnorm(0, 10),
+    beta_income ~ dnorm(0, 10),
+    beta_age ~ dnorm(0, 10)
+  ), data = data, chains = 4, cores = 4
+)
+
+# Summary statistics
+summary <- precis(model, depth = 2)
+print(summary)
+
+
+
+
+
+library(ggplot2)
+
+# Create a dataframe for plotting
+plot_data <- data.frame(
+  LinkedInUsage = data$LinkedInUsage,
+  Income = data$Income,
+  Age = data$Age
+)
+
+# Create a basic scatter plot
+ggplot(plot_data, aes(x = Income, y = LinkedInUsage, color = as.factor(Age))) +
+  geom_point(size = 4) +
+  labs(title = "LinkedIn Usage by Income and Age",
+       x = "Income Level (1-5)",
+       y = "LinkedIn Usage (1=Yes, 0=No)",
+       color = "Age") +
+  theme_minimal() +
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = TRUE, aes(fill = ..level..))
+
+```
+```{r} 
+#The data is too restrictive, so we modify our model
+# Load required packages
+library(rethinking)
+library(dagitty)
+
+# Sample data
+data <- list(
+  LinkedInUsage = c(1, 0, 1, 0),  # Binary outcome (1 for usage, 0 for non-usage)
+  Income = c(1, 2, 3, 2),         # Example income categories
+  Age = c(25, 35, 55, 45)         # Age values
+)
+
+model <- ulam(
+  alist(
+    LinkedInUsage ~ dbinom(1, p),  # Binary outcome
+    logit(p) <- alpha + beta_income * Income + beta_age * Age,  # Logit model
+    alpha ~ dnorm(0, 1.5),          # Prior for intercept
+    beta_income ~ dnorm(0, 1),      # Prior for income effect
+    beta_age ~ dnorm(0, 1)          # Prior for age effect
+  ), data = data, chains = 4, cores = 4
+)
+
+summary <- precis(model, depth = 2)
+print(summary)
+
+
+library(ggplot2)
+
+plot_data <- data.frame(
+  LinkedInUsage = data$LinkedInUsage,
+  Income = data$Income,
+  Age = data$Age
+)
+
+ggplot(plot_data, aes(x = Income, y = LinkedInUsage, color = as.factor(Age))) +
+  geom_point(size = 4) +
+  labs(title = "LinkedIn Usage by Income and Age",
+       x = "Income Level (1-3)",
+       y = "LinkedIn Usage (1=Yes, 0=No)",
+       color = "Age") +
+  theme_minimal() +
+  geom_smooth(method = "glm", method.args = list(family = "binomial"), se = TRUE, aes(fill = ..level..))
+
+```
+
+Plot interpretation: 
+
+1)Income and LinkedIn Usage:
+
+Individuals with the highest income level (3) have a high likelihood of LinkedIn usage, regardless of age.
+Those in the middle income level (2) are shown with no LinkedIn usage, indicating a possible income threshold for LinkedIn engagement.
+Individuals with the lowest income level (1) also show LinkedIn usage, specifically for younger participants (age 25).
+
+2)Age Patterns:
+
+Young adults (age 25) at the lowest income level use LinkedIn, potentially indicating a motivation among younger individuals to use LinkedIn for networking or career advancement, even with limited financial resources.
+Older adults (age 55) at the highest income level also show LinkedIn usage, which may reflect a need for professional networking or a greater familiarity with the platform due to career experience.
+
+3)Insights on Usage Trends:
+
+There seems to be an interaction between income and age in LinkedIn usage, with both low-income younger users and high-income older users showing interest in the platform.
+This pattern could suggest that younger users may be driven by career-building needs, whereas older, higher-income users may use LinkedIn for professional networking or maintaining industry connections.
+
+**Results and Discussion:** 
+
+
+This analysis explored whether income level causally influences LinkedIn usage among adults, with age included as a possible confounding variable. The plot provided shows LinkedIn usage by income level (categorized from 1 to 3), with each point representing an individual's LinkedIn usage status (1 = Yes, 0 = No) and colored according to age.
+
+**Key Findings:**
+
+1)Income and LinkedIn Usage: The plot indicates a possible association between income level and LinkedIn usage. Specifically, LinkedIn usage is evident among individuals at both lower and higher income levels, though with limited data points. This suggests that LinkedIn usage may not strictly correlate with income alone, as individuals from various income levels engage with the platform.
+
+2)Age as a Factor: The inclusion of age highlights that younger individuals (25-35 years) are present in both lower and higher income categories, while older individuals (45-55 years) are more represented in higher income levels. However, LinkedIn usage appears across all age groups, indicating that age might not solely determine LinkedIn usage, though it may interact with income to some extent.
+
+3)Causality and Confounding: The initial hypothesis proposed that higher income would causally increase LinkedIn usage due to the greater access to professional networking tools, such as LinkedIn Premium, and a stronger incentive for career advancement. However, from this analysis, there is no definitive evidence to establish causality, primarily due to the limited data points and lack of controlled experiments. Additionally, other variables such as education level, industry type, and job-search motivation could confound this relationship.
+
+4)Directed Acyclic Graph (DAG) Analysis: The DAG proposed in the causal model suggested a direct effect of income on LinkedIn usage, with age affecting both income and LinkedIn usage. However, given the data limitations, the plot alone does not robustly support or refute this model. A larger dataset with more demographic details would be needed to control for confounding factors and better understand these relationships.
+
+**Broader Context:** 
+
+In the broader context, this analysis is part of a larger conversation on digital inequality and professional platform accessibility. LinkedIn plays a significant role in career development, and understanding the socio-economic factors affecting its usage could inform policies aimed at leveling the playing field for job seekers across different income groups. Digital divides can exacerbate inequalities, as individuals with higher incomes may have better access to premium features, career resources, and networking opportunities.
+
+While this analysis did not find strong evidence of a causal effect of income on LinkedIn usage, it raises important questions about accessibility and engagement with professional networks. Addressing these disparities could involve providing subsidized access to career-related platforms or offering more professional development resources to lower-income groups, which may help bridge these gaps and promote equal opportunities.
+
+**Conclusion:** 
+
+In summary, this exploratory analysis provides insights but does not confirm a causal relationship between income and LinkedIn usage. Future research should involve more comprehensive datasets, perhaps integrating additional socio-economic variables and using advanced causal inference techniques to better isolate the effects of income on LinkedIn engagement. As social media continues to influence career opportunities, understanding these dynamics is crucial in promoting equitable access to professional networks and career advancement resources.
+
+**References** 
+
+
+Perrin, A. (2015). Social Media Usage: 2005-2015. Pew Research Center.
+Anderson, M., & Perrin, A. (2019). Tech adoption climbs among older adults. Pew Research Center.
+Auxier, B., & Anderson, M. (2021). Social media use in 2021. Pew Research Center.
+Tandoc, E. C., Lim, Z. W., & Ling, R. (2018). Defining “Fake News.” Digital Journalism, 6(2), 137-153.
